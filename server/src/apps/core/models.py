@@ -1,5 +1,5 @@
 from django.db import models
-from apps.common.models import TimeStampedModel
+from apps.common.models import BaseModel
 from django.core.validators import MinValueValidator
 import uuid
 from django.contrib.auth import get_user_model
@@ -29,7 +29,7 @@ class ParkingLotAvailability(models.TextChoices):
     CUSTOM = 'custom', 'Custom Hours'
 
 
-class ParkingLot(TimeStampedModel):
+class ParkingLot(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_spots')
     title = models.CharField(max_length=200)
@@ -41,7 +41,6 @@ class ParkingLot(TimeStampedModel):
     price_per_hour = models.DecimalField(max_digits=6, decimal_places=2, validators=[MinValueValidator(0)])
     available_spots = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
     availability = models.CharField(max_length=20, choices=ParkingLotAvailability.choices)
-    is_active = models.BooleanField(default=True)
     features = models.JSONField(default=list, blank=True)  # ['covered', 'security', 'ev_charging']
     instructions = models.TextField(blank=True)
 
@@ -55,11 +54,11 @@ class ParkingLot(TimeStampedModel):
         return f"{self.title} - {self.address}"
 
 
-class Booking(TimeStampedModel):
+class Booking(BaseModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     booking_id = models.CharField(max_length=20, unique=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='bookings')
-    spot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, related_name='bookings')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='booking')
+    spot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, related_name='booking')
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     duration_hours = models.DecimalField(max_digits=4, decimal_places=2)

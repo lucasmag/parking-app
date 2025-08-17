@@ -1,8 +1,8 @@
 from django.contrib.auth.models import AbstractUser
-from apps.common.models import TimeStampedModel
+from apps.common.models import BaseModel
 from django.db import models
 
-class User(AbstractUser, TimeStampedModel):
+class User(AbstractUser, BaseModel):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30)
     last_name = models.CharField(max_length=30)

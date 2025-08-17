@@ -8,9 +8,10 @@ from django.db.models.functions import Sqrt, Power
 from geopy.distance import geodesic
 from datetime import datetime, timedelta
 import django_filters
+from apps import docs
 
-from .models import ParkingLot, Booking
-from .serializers import (
+from apps.core.models import ParkingLot, Booking
+from apps.core.serializers import (
     ParkingLotListSerializer, ParkingLotDetailSerializer, CreateParkingLotSerializer,
     BookingSerializer, CreateBookingSerializer
 )
@@ -26,13 +27,14 @@ class ParkingLotFilter(django_filters.FilterSet):
         model = ParkingLot
         fields = ['min_price', 'max_price', 'spot_type', 'availability', 'min_rating']
 
+@docs.PARKING_LOT_VIEWSET_DOCS
 class ParkingLotViewSet(ModelViewSet):
     queryset = ParkingLot.objects.filter(is_active=True)
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ParkingLotFilter
     search_fields = ['title', 'address', 'description']
-    ordering_fields = ['price_per_hour', 'rating', 'created_at']
+    ordering_fields = ['price_per_hour', 'created_at']
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -47,11 +49,10 @@ class ParkingLotViewSet(ModelViewSet):
         # Location-based filtering
         lat = self.request.query_params.get('lat')
         lng = self.request.query_params.get('lng')
-        radius = self.request.query_params.get('radius', 10)  # Default 10km radius
+        radius = self.request.query_params.get('radius', 10)
 
         if lat and lng:
             lat, lng = float(lat), float(lng)
-            # Calculate distance using Haversine formula approximation
             queryset = queryset.annotate(
                 distance=Sqrt(
                     Power((F('latitude') - lat) * 111.32, 2) +
@@ -61,12 +62,13 @@ class ParkingLotViewSet(ModelViewSet):
 
         return queryset
 
+    @docs.PARKING_LOT_AVAILABILITY_DOCS
     @action(detail=True, methods=['get'])
     def availability(self, request, pk=None):
+        """Get parking lot availability for a specific date"""
         spot = self.get_object()
         date = request.query_params.get('date', datetime.now().date())
         
-        # Get bookings for the specified date
         bookings = Booking.objects.filter(
             spot=spot,
             status__in=['confirmed', 'active'],
@@ -80,6 +82,7 @@ class ParkingLotViewSet(ModelViewSet):
             'booked_slots': list(bookings)
         })
 
+@docs.BOOKING_VIEWSET_DOCS
 class BookingViewSet(ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
@@ -94,8 +97,10 @@ class BookingViewSet(ModelViewSet):
             return CreateBookingSerializer
         return BookingSerializer
 
+    @docs.BOOKING_EXTEND_SESSION_DOCS
     @action(detail=True, methods=['post'])
     def extend_session(self, request, pk=None):
+        """Extend an active booking session"""
         booking = self.get_object()
         
         if booking.status != 'active':
@@ -130,8 +135,10 @@ class BookingViewSet(ModelViewSet):
             'total_price': booking.total_price
         })
 
+    @docs.BOOKING_CANCEL_DOCS
     @action(detail=True, methods=['post'])
     def cancel_booking(self, request, pk=None):
+        """Cancel a pending or confirmed booking"""
         booking = self.get_object()
         
         if booking.status not in ['pending', 'confirmed']:
@@ -141,27 +148,22 @@ class BookingViewSet(ModelViewSet):
         booking.status = 'cancelled'
         booking.save()
         
-        # Create notification
-        Notification.objects.create(
-            user=booking.user,
-            type='booking_cancelled',
-            title='Booking Cancelled',
-            message=f'Your booking at {booking.spot.title} has been cancelled.',
-            booking=booking
-        )
-        
         return Response({'message': 'Booking cancelled successfully'})
 
+
+@docs.MY_PARKING_LOTS_VIEWSET_DOCS
 class MyParkingLotsViewSet(ReadOnlyModelViewSet):
-    """ViewSet for spots owned by the current user"""
+    """ViewSet for parking lots owned by the current user"""
     serializer_class = ParkingLotDetailSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         return ParkingLot.objects.filter(owner=self.request.user)
 
+    @docs.MY_PARKING_LOT_BOOKINGS_DOCS
     @action(detail=True, methods=['get'])
     def bookings(self, request, pk=None):
+        """Get bookings for a specific owned parking lot"""
         spot = self.get_object()
         bookings = Booking.objects.filter(spot=spot).order_by('-created_at')
         serializer = BookingSerializer(bookings, many=True)
@@ -199,18 +201,19 @@ class MyParkingLotsViewSet(ReadOnlyModelViewSet):
 #     def get_queryset(self):
 #         return Notification.objects.filter(user=self.request.user)
 
-    @action(detail=False, methods=['post'])
-    def mark_all_read(self, request):
-        self.get_queryset().update(is_read=True)
-        return Response({'message': 'All notifications marked as read'})
+    # @action(detail=False, methods=['post'])
+    # def mark_all_read(self, request):
+    #     self.get_queryset().update(is_read=True)
+    #     return Response({'message': 'All notifications marked as read'})
 
-    @action(detail=True, methods=['post'])
-    def mark_read(self, request, pk=None):
-        notification = self.get_object()
-        notification.is_read = True
-        notification.save()
-        return Response({'message': 'Notification marked as read'})
+    # @action(detail=True, methods=['post'])
+    # def mark_read(self, request, pk=None):
+    #     notification = self.get_object()
+    #     notification.is_read = True
+    #     notification.save()
+    #     return Response({'message': 'Notification marked as read'})
 
+@docs.SEARCH_PARKING_SPOTS_DOCS
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def search_parking_spots(request):
@@ -261,6 +264,7 @@ def search_parking_spots(request):
         'results': results
     })
 
+@docs.DASHBOARD_STATS_DOCS
 @api_view(['GET'])
 @permission_classes([permissions.IsAuthenticated])
 def dashboard_stats(request):

@@ -193,21 +193,4 @@ SPECTACULAR_SETTINGS = {
     # Optional: Add authentication schemes
     'COMPONENT_SPLIT_REQUEST': True,
     'SCHEMA_PATH_PREFIX': '/api/',
-    'SECURITY': [
-        {
-            'type': 'http',
-            'scheme': 'bearer',
-            'bearerFormat': 'JWT',
-        }
-    ],
-    # This might help with permission detection
-    'APPEND_COMPONENTS': {
-        'securitySchemes': {
-            'bearerAuth': {
-                'type': 'http',
-                'scheme': 'bearer',
-                'bearerFormat': 'JWT',
-            }
-        }
-    },
 }

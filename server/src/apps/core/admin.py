@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ParkingLot, Booking
+from apps.core.models import ParkingLot, Booking
 
 @admin.register(ParkingLot)
 class ParkingLotAdmin(admin.ModelAdmin):

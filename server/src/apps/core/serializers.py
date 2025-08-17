@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ParkingLot, Booking
+from apps.core.models import ParkingLot, Booking
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -39,7 +39,7 @@ class ParkingLotDetailSerializer(serializers.ModelSerializer):
                  'upcoming_bookings', 'created_at']
 
     # def get_is_favorite(self, obj):
-    #     request = self.context.get('request')
+    #     request = self.context.get('request'
     #     if request and request.user.is_authenticated:
     #         return FavoriteSpot.objects.filter(user=request.user, spot=obj).exists()
     #     return False
@@ -70,7 +70,7 @@ class CreateParkingLotSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # images_data = validated_data.pop('images', [])
-        spot = ParkingLot.objects.create(owner=self.context['request'].user, **validated_data)
+        return ParkingLot.objects.create(owner=self.context['request'].user, **validated_data)
         
         # for i, image_data in enumerate(images_data):
         #     ParkingLotImage.objects.create(
@@ -92,11 +92,11 @@ class BookingSerializer(serializers.ModelSerializer):
                  'notes', 'created_at', 'updated_at']
         read_only_fields = ['id', 'booking_id', 'created_at', 'updated_at']
 
-    def get_spot_image(self, obj):
-        primary_image = obj.spot.images.filter(is_primary=True).first()
-        if primary_image:
-            return primary_image.image.url
-        return None
+    # def get_spot_image(self, obj):
+    #     primary_image = obj.spot.images.filter(is_primary=True).first()
+    #     if primary_image:
+    #         return primary_image.image.url
+    #     return None
 
 class CreateBookingSerializer(serializers.ModelSerializer):
     class Meta:
