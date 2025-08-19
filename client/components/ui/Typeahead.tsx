@@ -8,14 +8,16 @@ import {
   ActivityIndicator,
   Keyboard,
   Dimensions,
-  ListRenderItem
+  ListRenderItem,
+  Alert
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 
 const { height: screenHeight } = Dimensions.get('window');
 
 // Google Places API Configuration
-const GOOGLE_PLACES_API_KEY = 'AIzaSyCMsvXaEm1guNzXM-cK0UGjd2MVHlktfZs'; // Replace with your API key
+const GOOGLE_PLACES_API_KEY = 'AIzaSyCMsvXaEm1guNzXM-cK0UGjd2MVHlktfZs';
 const GOOGLE_PLACES_BASE_URL = 'https://maps.googleapis.com/maps/api/place';
 
 // Type definitions
@@ -135,7 +137,7 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
   location = null,
   className = "",
   showCurrentLocation = true,
-  currentLocationText = "Use current location",
+  currentLocationText = "Usar localização atual",
   maxResults = 5,
   debounceMs = 300
 }) => {
@@ -144,6 +146,7 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoadingCurrentLocation, setIsLoadingCurrentLocation] = useState<boolean>(false);
   
   const debounceRef = useRef<number | null>(null);
   const inputRef = useRef<TextInput>(null);
@@ -181,12 +184,12 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
       if (data.status === 'OK') {
         setPredictions(data.predictions.slice(0, maxResults));
       } else {
-        console.log(data.status)
-        setError(data.error_message || 'Error fetching addresses');
+        console.log(data.status);
+        setError(data.error_message || 'Erro ao buscar endereços');
         setPredictions([]);
       }
     } catch (err) {
-      setError('Network error occurred');
+      setError('Erro de conexão');
       setPredictions([]);
     } finally {
       setIsLoading(false);
@@ -251,35 +254,68 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
     onAddressSelect?.(prediction.description, prediction);
   };
 
-  // Handle current location selection
-  const handleCurrentLocation = (): void => {
-    setQuery(currentLocationText);
-    setShowSuggestions(false);
-    setPredictions([]);
+  // Handle current location selection with proper permissions
+  const handleCurrentLocation = async (): Promise<void> => {
+    setIsLoadingCurrentLocation(true);
     
-    // Request current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const locationData: LocationData = {
-            address: currentLocationText,
-            location: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            },
-            isCurrentLocation: true
-          };
-          onLocationSelect?.(locationData);
+    try {
+      // Check permission status first
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      // Request permission if not already granted
+      if (existingStatus !== 'granted') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        Alert.alert(
+          'Permissão Negada',
+          'Para usar sua localização atual, é necessário permitir o acesso à localização nas configurações do app.',
+          [
+            { text: 'OK', style: 'default' }
+          ]
+        );
+        return;
+      }
+
+      // Get current location
+      const currentPosition = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+        distanceInterval: 100,
+      });
+
+      setQuery(currentLocationText);
+      setShowSuggestions(false);
+      setPredictions([]);
+      Keyboard.dismiss();
+      
+      const locationData: LocationData = {
+        address: currentLocationText,
+        location: {
+          lat: currentPosition.coords.latitude,
+          lng: currentPosition.coords.longitude
         },
-        (error) => {
-          console.error('Error getting current location:', error);
-          setError('Unable to get current location');
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+        isCurrentLocation: true
+      };
+      
+      onLocationSelect?.(locationData);
+      onAddressSelect?.(currentLocationText, { isCurrentLocation: true });
+      
+    } catch (error) {
+      console.error('Error getting current location:', error);
+      Alert.alert(
+        'Erro de Localização',
+        'Não foi possível obter sua localização atual. Verifique se o GPS está ativo.',
+        [
+          { text: 'OK', style: 'default' }
+        ]
       );
+    } finally {
+      setIsLoadingCurrentLocation(false);
     }
-    
-    onAddressSelect?.(currentLocationText, { isCurrentLocation: true });
   };
 
   // Clear search
@@ -344,18 +380,25 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
       onPress={handleCurrentLocation}
       className="flex-row items-center py-3 px-4 border-b border-gray-100"
       activeOpacity={0.7}
+      disabled={isLoadingCurrentLocation}
     >
       <View className="w-8 h-8 bg-blue-100 rounded-full justify-center items-center mr-3">
-        <Feather name="crosshair" size={16} color="#3B82F6" />
+        {isLoadingCurrentLocation ? (
+          <ActivityIndicator size="small" color="#3B82F6" />
+        ) : (
+          <Feather name="crosshair" size={16} color="#3B82F6" />
+        )}
       </View>
       
       <View className="flex-1">
         <Text className="text-blue-600 font-medium text-base">
-          {currentLocationText}
+          {isLoadingCurrentLocation ? 'Obtendo localização...' : currentLocationText}
         </Text>
       </View>
       
-      <Feather name="crosshair" size={16} color="#3B82F6" />
+      {!isLoadingCurrentLocation && (
+        <Feather name="crosshair" size={16} color="#3B82F6" />
+      )}
     </TouchableOpacity>
   );
 
@@ -435,7 +478,11 @@ interface TypeaheadExampleState {
   selectedLocation: LocationData | null;
 }
 
-const TypeaheadExample: React.FC = () => {
+interface TypeaheadExampleProps {
+  onLocationSelect?: (locationData: LocationData) => void;
+}
+
+const TypeaheadExample: React.FC<TypeaheadExampleProps> = ({ onLocationSelect }) => {
   const [selectedAddress, setSelectedAddress] = useState<string>('');
   const [selectedLocation, setSelectedLocation] = useState<LocationData | null>(null);
 
@@ -444,53 +491,26 @@ const TypeaheadExample: React.FC = () => {
     prediction: GooglePlacesPrediction | { isCurrentLocation: boolean }
   ): void => {
     console.log('Selected address:', address);
-    // console.log('Prediction object:', prediction);
     setSelectedAddress(address);
   };
 
   const handleLocationSelect = (locationData: LocationData): void => {
     console.log('Location details:', locationData);
     setSelectedLocation(locationData);
+    // Forward to parent component if provided
+    onLocationSelect?.(locationData);
   };
 
   return (
-    <View className="flex-1 bg-gray-50 p-4">
-      <View>
-        <GoogleMapsTypeahead
-          placeholder="Onde você quer estacionar?"
-          onAddressSelect={handleAddressSelect}
-          onLocationSelect={handleLocationSelect}
-          countryCode="BR"
-          showCurrentLocation={true}
-          maxResults={5}
-        />
-      </View>
-
-      {/* {selectedAddress && (
-        <View className="bg-white rounded-xl p-4 border border-gray-200">
-          <Text className="text-gray-900 font-semibold text-base mb-2">Selected Address:</Text>
-          <Text className="text-gray-700 text-sm mb-3">{selectedAddress}</Text>
-          
-          {selectedLocation && (
-            <View>
-              <Text className="text-gray-900 font-semibold text-base mb-2">Coordinates:</Text>
-              <Text className="text-gray-700 text-sm">
-                Lat: {selectedLocation.location?.lat?.toFixed(6)}, 
-                Lng: {selectedLocation.location?.lng?.toFixed(6)}
-              </Text>
-              
-              {selectedLocation.types && (
-                <View className="mt-2">
-                  <Text className="text-gray-900 font-semibold text-base mb-1">Types:</Text>
-                  <Text className="text-gray-700 text-sm">
-                    {selectedLocation.types.join(', ')}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      )} */}
+    <View className="flex-1">
+      <GoogleMapsTypeahead
+        placeholder="Onde você quer estacionar?"
+        onAddressSelect={handleAddressSelect}
+        onLocationSelect={handleLocationSelect}
+        countryCode="BR"
+        showCurrentLocation={true}
+        maxResults={5}
+      />
     </View>
   );
 };

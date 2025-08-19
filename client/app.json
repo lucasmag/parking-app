@@ -44,6 +44,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "developmentClient": {
+      "options": {
+        "tunnel": true
+      }
     }
   }
 }
