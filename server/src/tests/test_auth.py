@@ -1,94 +1,168 @@
 import pytest
-from django.test import TestCase
-from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
+from tests.factories import UserFactory
 
 User = get_user_model()
 
-class AuthenticationTestCase(APITestCase):
+@pytest.mark.unit
+class TestUserAuthentication:
     
-    def setUp(self):
-        self.client = APIClient()
-        self.register_url = reverse('user-register')
-        self.login_url = reverse('user-login')
-        self.logout_url = reverse('user-logout')
-        self.profile_url = reverse('user-profile')
+    @pytest.mark.django_db
+    def test_user_registration_success(self, api_client):
+        """Test successful user registration"""
+        user_data = {
+            'email': 'newuser@test.com',
+            'username': 'newuser',
+            'first_name': 'New',
+            'last_name': 'User',
+            'password': 'testpassword123',
+            'password_confirm': 'testpassword123'
+        }
         
-        self.user_data = {
-            'email': 'testuser@example.com',
+        url = reverse('user-list')
+        response = api_client.post(url, user_data)
+        
+        assert response.status_code == status.HTTP_201_CREATED
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+        assert response.data['user']['email'] == user_data['email']
+        
+        # Verify user was created in database
+        user = User.objects.get(email=user_data['email'])
+        assert user.username == user_data['username']
+        assert user.first_name == user_data['first_name']
+
+    @pytest.mark.django_db
+    @pytest.mark.parametrize("field,value,expected_error", [
+        ('email', 'invalid-email', 'Enter a valid email address'),
+        ('password', '123', 'This password is too short'),
+        ('password_confirm', 'different', "Passwords don't match"),
+    ])
+    def test_user_registration_validation(self, api_client, field, value, expected_error):
+        """Test user registration validation errors"""
+        user_data = {
+            'email': 'test@test.com',
             'username': 'testuser',
             'first_name': 'Test',
             'last_name': 'User',
             'password': 'testpassword123',
             'password_confirm': 'testpassword123'
         }
-
-    def test_user_registration(self):
-        """Test user registration"""
-        response = self.client.post(self.register_url, self.user_data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
-        self.assertEqual(User.objects.count(), 1)
-
-    def test_user_registration_password_mismatch(self):
-        """Test registration with password mismatch"""
-        data = self.user_data.copy()
-        data['password_confirm'] = 'differentpassword'
-        response = self.client.post(self.register_url, data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_user_registration_duplicate_email(self):
-        """Test registration with duplicate email"""
-        User.objects.create_user(**{k: v for k, v in self.user_data.items() 
-                                   if k not in ['password_confirm']})
-        response = self.client.post(self.register_url, self.user_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_user_login(self):
-        """Test user login"""
-        user = User.objects.create_user(
-            email=self.user_data['email'],
-            username=self.user_data['username'],
-            password=self.user_data['password'],
-            first_name=self.user_data['first_name'],
-            last_name=self.user_data['last_name']
-        )
+        user_data[field] = value
         
-        login_data = {
-            'email': self.user_data['email'],
-            'password': self.user_data['password']
+        url = reverse('user-list')
+        response = api_client.post(url, user_data)
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        if field == 'password_confirm':
+            assert expected_error in str(response.data)
+        else:
+            assert field in response.data
+
+    @pytest.mark.django_db
+    def test_duplicate_email_registration(self, api_client):
+        """Test registration with existing email fails"""
+        existing_user = UserFactory(email='existing@test.com')
+        
+        user_data = {
+            'email': 'existing@test.com',
+            'username': 'newuser',
+            'first_name': 'New',
+            'last_name': 'User',
+            'password': 'testpassword123',
+            'password_confirm': 'testpassword123'
         }
         
-        response = self.client.post(self.login_url, login_data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('access', response.data)
-        self.assertIn('refresh', response.data)
+        url = reverse('user-list')
+        response = api_client.post(url, user_data)
+        
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'email' in response.data
 
-    def test_user_login_invalid_credentials(self):
+    @pytest.mark.django_db
+    def test_user_login_success(self, api_client):
+        """Test successful user login"""
+        password = 'testpass123'
+        user = UserFactory(password=password)
+        
+        url = reverse('user-login')
+        response = api_client.post(url, {
+            'email': user.email,
+            'password': password
+        })
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert 'access' in response.data
+        assert 'refresh' in response.data
+        assert response.data['user']['email'] == user.email
+
+    @pytest.mark.django_db
+    @pytest.mark.parametrize("email,password,expected_status", [
+        ('wrong@email.com', 'testpass123', status.HTTP_400_BAD_REQUEST),
+        ('test@email.com', 'wrongpassword', status.HTTP_400_BAD_REQUEST),
+        ('', 'testpass123', status.HTTP_400_BAD_REQUEST),
+        ('test@email.com', '', status.HTTP_400_BAD_REQUEST),
+    ])
+    def test_user_login_invalid_credentials(self, api_client, email, password, expected_status):
         """Test login with invalid credentials"""
-        login_data = {
-            'email': 'nonexistent@example.com',
-            'password': 'wrongpassword'
-        }
+        UserFactory(email='test@email.com', password='testpass123')
         
-        response = self.client.post(self.login_url, login_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    def test_protected_endpoint_without_token(self):
-        """Test accessing protected endpoint without token"""
-        response = self.client.get(self.profile_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_protected_endpoint_with_token(self):
-        """Test accessing protected endpoint with valid token"""
-        user = User.objects.create_user(**{k: v for k, v in self.user_data.items() 
-                                          if k not in ['password_confirm']})
-        token = RefreshToken.for_user(user)
+        url = reverse('user-login')
+        response = api_client.post(url, {'email': email, 'password': password})
         
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
-        response = self.client.get(self.profile_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert response.status_code == expected_status
+
+    @pytest.mark.django_db
+    def test_user_logout_success(self, authenticated_client):
+        """Test successful user logout"""
+        # Get refresh token
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(authenticated_client.user)
+        
+        url = reverse('user-logout')
+        response = authenticated_client.post(url, {'refresh': str(refresh)})
+        
+        assert response.status_code == status.HTTP_205_RESET_CONTENT
+        assert 'Successfully logged out' in response.data['message']
+
+    @pytest.mark.django_db
+    def test_user_profile_access(self, authenticated_client):
+        """Test accessing user profile"""
+        url = reverse('user-profile')
+        response = authenticated_client.get(url)
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['user']['email'] == authenticated_client.user.email
+
+    @pytest.mark.django_db
+    def test_change_password_success(self, authenticated_client):
+        """Test successful password change"""
+        old_password = 'oldpass123'
+        new_password = 'newpass456'
+        
+        # Set old password
+        authenticated_client.user.set_password(old_password)
+        authenticated_client.user.save()
+        
+        url = reverse('user-change-password')
+        response = authenticated_client.post(url, {
+            'old_password': old_password,
+            'new_password': new_password,
+            'new_password_confirm': new_password
+        })
+        
+        assert response.status_code == status.HTTP_200_OK
+        
+        # Verify password was changed
+        authenticated_client.user.refresh_from_db()
+        assert authenticated_client.user.check_password(new_password)
+
+    @pytest.mark.django_db
+    def test_protected_endpoint_requires_auth(self, api_client):
+        """Test that protected endpoints require authentication"""
+        url = reverse('user-protected')
+        response = api_client.get(url)
+        
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
