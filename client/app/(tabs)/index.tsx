@@ -150,17 +150,15 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-gray-50 space-between">
       {/* Header - Fixed height */}
       <View className="bg-white pt-2.5 pb-1 border-b border-gray-200">
         <Header title="Estaciona" />
       </View>
       
       {/* Search Input - Fixed height */}
-      <View className="bg-white py-3 border-b border-gray-200">
-        <View className="flex-1 px-4">
-          <TypeaheadExample onLocationSelect={handleLocationFromTypeahead} />
-        </View>
+      <View className="flex-row items-center h-[65px]">
+        <TypeaheadExample onLocationSelect={handleLocationFromTypeahead} />
       </View>
 
       {/* Messages Container - Dynamic height */}
@@ -209,7 +207,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Map Container - Takes remaining height */}
-      <View className="flex-1 relative h-[400]">
+      <View className="flex-1 relative">
         <MapView 
           ref={mapRef}
           provider={PROVIDER_GOOGLE} 
@@ -242,6 +240,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   map: {
-    flex: 1, // Only keep the map style that needs to be a StyleSheet
+    flexGrow: 1,
+    flexShrink: 1,
+    width: '100%',
+    height: '80%',
   },
 });
