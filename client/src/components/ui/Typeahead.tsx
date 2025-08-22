@@ -410,7 +410,7 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
     <View className={`relative ${className}`}>
       {/* Input Field */}
       <View className="relative">
-        <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <View className="flex-row items-center bg-white rounded-full border border-gray-200 px-4 py-3">
           <Feather name="search" size={20} color="#9CA3AF" />
           
           <TextInput
@@ -504,7 +504,7 @@ const TypeaheadExample: React.FC<TypeaheadExampleProps> = ({ onLocationSelect })
   return (
     <View className="flex-1">
       <GoogleMapsTypeahead
-        placeholder="Onde você quer estacionar?"
+        placeholder="Digite um local ou endereco"
         onAddressSelect={handleAddressSelect}
         onLocationSelect={handleLocationSelect}
         countryCode="BR"
