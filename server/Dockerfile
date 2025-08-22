@@ -14,6 +14,11 @@ RUN apt-get update \
         libpq-dev \
         curl \
         netcat-traditional \
+        gdal-bin \
+        libgdal-dev \
+        libgeos-dev \
+        libproj-dev \
+        libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install uv

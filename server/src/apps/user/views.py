@@ -28,9 +28,9 @@ class UserViewSet(ModelViewSet):
 
     def get_permissions(self):
         if self.action == 'create':
-            return [permissions.AllowAny]
+            return [permissions.AllowAny()]
         elif self.action in ['list']:
-            return [permissions.IsAdminUser]
+            return [permissions.IsAdminUser()]
         
         return super().get_permissions()
 
@@ -148,3 +148,20 @@ class UserViewSet(ModelViewSet):
         if kwargs.get('pk') == 'me':
             kwargs['pk'] = request.user.id
         return super().partial_update(request, *args, **kwargs)
+
+
+{
+    "first_name": "Linda",
+    "last_name": "Doe",
+    "username": "linda",
+    "email": "linda@example.com",
+    "password": "senha123",
+    "password_confirm": "senha123"
+}
+    
+
+# last_name: Doe
+# username: linda
+# email: linda@example.com
+# password: senha123
+# password_confirm: senha123
