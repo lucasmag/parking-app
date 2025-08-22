@@ -7,6 +7,10 @@ while ! nc -z db 5432; do
 done
 echo "Database started"
 
+echo "Enabling PostGIS extension..."
+PGPASSWORD=postgres psql -h db -U postgres -d parking_app -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+PGPASSWORD=postgres psql -h db -U postgres -d parking_app -c "CREATE EXTENSION IF NOT EXISTS postgis_topology;"
+
 # Run migrations
 echo "Running migrations..."
 cd /app/src
