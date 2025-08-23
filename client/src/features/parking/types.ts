@@ -12,9 +12,9 @@ export interface ParkingSpot {
   latitude: number;
   longitude: number;
   spot_type: string;
-  price_per_hour: number;
-  available_spots: number;
-  total_spots: number;
+  pricePerHour: number;
+  availableSpots: number;
+  totalSpots: number;
   distance: number;
   features: string[];
   availability: string;

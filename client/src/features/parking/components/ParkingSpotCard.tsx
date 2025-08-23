@@ -1,21 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-
-interface ParkingSpot {
-  id: string;
-  title: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  spot_type: string;
-  price_per_hour: number;
-  available_spots: number;
-  total_spots: number;
-  distance: number;
-  features: string[];
-  availability: string;
-}
+import Animated from 'react-native-reanimated';
+import { ParkingSpot } from '../types';
 
 interface ParkingSpotCardProps {
   spot: ParkingSpot;
@@ -34,7 +21,7 @@ const getSpotTypeIcon = (type: string) => {
       return 'car';
     default:
       return 'map-pin';
-  }
+  }1
 };
 
 const getSpotTypeLabel = (type: string) => {
@@ -67,17 +54,13 @@ const getAvailabilityLabel = (availability: string) => {
   }
 };
 
-export const ParkingSpotCard: React.FC<ParkingSpotCardProps> = ({ spot, onPress }) => {
-  const isAvailable = spot.available_spots > 0;
+export default function ParkingSpotCard({spot, onPress}: ParkingSpotCardProps) {
+  const isAvailable = spot.availableSpots > 0;
 
   return (
-    <TouchableOpacity
-      onPress={() => onPress(spot)}
-      className="bg-white rounded-xl p-4 mx-2 shadow-sm border border-gray-100 w-72"
-      style={{ elevation: 2 }}
-    >
-      {/* Header */}
-      <View className="flex-row items-start justify-between mb-3">
+    <Animated.View className="pr-2">
+      <View className='bg-white rounded-3xl p-4 shadow-md border border-gray-100 w-full'>
+        <View className="flex-row items-start justify-between mb-3">
         <View className="flex-1 mr-3">
           <Text className="text-lg font-semibold text-gray-900 mb-1" numberOfLines={1}>
             {spot.title}
@@ -114,7 +97,7 @@ export const ParkingSpotCard: React.FC<ParkingSpotCardProps> = ({ spot, onPress 
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-baseline">
           <Text className="text-xl font-bold text-green-600">
-            R$ {spot.price_per_hour.toFixed(2)}
+            R$ {spot?.pricePerHour?.toFixed(2)}
           </Text>
           <Text className="text-sm text-gray-500 ml-1">/hora</Text>
         </View>
@@ -124,7 +107,7 @@ export const ParkingSpotCard: React.FC<ParkingSpotCardProps> = ({ spot, onPress 
             <>
               <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
               <Text className="text-sm font-medium text-gray-900">
-                {spot.available_spots} vagas
+                {spot.availableSpots} vagas
               </Text>
             </>
           ) : (
@@ -137,41 +120,7 @@ export const ParkingSpotCard: React.FC<ParkingSpotCardProps> = ({ spot, onPress 
           )}
         </View>
       </View>
-
-      {/* Features (if any) */}
-      {spot.features && spot.features.length > 0 && (
-        <View className="flex-row flex-wrap mt-3 pt-3 border-t border-gray-100">
-          {spot.features.slice(0, 3).map((feature, index) => {
-            let icon = 'info';
-            let label = feature;
-            
-            if (feature === 'covered') {
-              icon = 'umbrella';
-              label = 'Coberto';
-            } else if (feature === 'security') {
-              icon = 'shield';
-              label = 'Segurança';
-            } else if (feature === 'ev_charging') {
-              icon = 'zap';
-              label = 'Carregador EV';
-            }
-            
-            return (
-              <View key={index} className="flex-row items-center bg-gray-50 px-2 py-1 rounded-full mr-2 mb-1">
-                <Feather name={icon as any} size={10} color="#6B7280" />
-                <Text className="text-xs text-gray-600 ml-1">{label}</Text>
-              </View>
-            );
-          })}
-          {spot.features.length > 3 && (
-            <View className="flex-row items-center bg-gray-50 px-2 py-1 rounded-full">
-              <Text className="text-xs text-gray-600">+{spot.features.length - 3}</Text>
-            </View>
-          )}
-        </View>
-      )}
-    </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
-};
-
-export default ParkingSpotCard;
+} 

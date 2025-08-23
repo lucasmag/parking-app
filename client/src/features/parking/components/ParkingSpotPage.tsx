@@ -9,6 +9,8 @@ import { MapLocation, ParkingSpot } from '../types';
 import { DEFAULT_LOCATION } from '../constants';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNearbySpotsQuery } from '../hooks/useNearbySpotsQuery';
+import ParkingSpotCarousel from './ParkingSpotCarousel';
+import CarPinIcon from '@/assets/svgs/car-pin.svg';
 
 
 export default function ParkingSpotPage() {
@@ -24,7 +26,6 @@ export default function ParkingSpotPage() {
   }, [location]);
 
   const {data} = useNearbySpotsQuery(nearbySpotParams);
-  console.log(data?.spots.map(spot => [spot.latitude, spot.longitude]));
 
   const mapRef = useRef<MapView>(null);
 
@@ -150,7 +151,7 @@ export default function ParkingSpotPage() {
 
     Alert.alert(
       spot.title,
-      `${spot.address}\n\nPreço: R$ ${spot.price_per_hour.toFixed(2)}/hora\nVagas disponíveis: ${spot.available_spots}\nDistância: ${spot.distance}km`,
+      `${spot.address}\n\nPreço: R$ ${spot.pricePerHour.toFixed(2)}/hora\nVagas disponíveis: ${spot.availableSpots}\nDistância: ${spot.distance}km`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -228,20 +229,20 @@ export default function ParkingSpotPage() {
           followsUserLocation={false}
           toolbarEnabled={false}
         >
-          {location && data?.spots.map((spot, index) => (
+          {location && data?.spots?.map((spot, index) => (
             <Marker
               key={index}
               coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
               anchor={{ x: 0.5, y: 0.5 }}
               title={spot.title}
             >
-              <MaterialIcons name="local-parking" size={24} color="black" />
+              <CarPinIcon />
             </Marker>
           ))}
         </MapView>
         <TouchableOpacity
           onPress={handleCurrentLocationPress}
-          className="absolute bottom-4 right-4 bg-white rounded-full p-3 shadow-lg border border-gray-200"
+          className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-lg border border-gray-200"
           disabled={isLoadingLocation}
         >
           {isLoadingLocation ? (
@@ -254,6 +255,8 @@ export default function ParkingSpotPage() {
             />
           )}
         </TouchableOpacity>
+
+        <ParkingSpotCarousel spots={data?.spots || []} className="flex absolute bottom-0 left-0 right-0 z-10 w-full"/>
       </View>
 
       {/* Quick Actions */}
