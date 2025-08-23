@@ -1,6 +1,6 @@
 import { Link, Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import Screen from '@/components/ui/Screen';
+import Screen from '@/src/components/layout/Screen';
 import { Text } from 'react-native';
 
 

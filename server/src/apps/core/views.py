@@ -7,6 +7,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.gis.geos import Point
 from django.contrib.gis.measure import Distance
 from django.contrib.gis.db.models.functions import Distance as DistanceFunction
+from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import Distance
+from django.contrib.gis.db.models.functions import Distance as DistanceFunction
 from datetime import datetime, timedelta
 import django_filters
 from apps import docs
@@ -25,6 +28,7 @@ class ParkingLotFilter(django_filters.FilterSet):
 
     class Meta:
         model = ParkingLot
+        fields = ['min_price', 'max_price', 'spot_type', 'availability']
         fields = ['min_price', 'max_price', 'spot_type', 'availability']
 
 @docs.PARKING_LOT_VIEWSET_DOCS
@@ -47,6 +51,7 @@ class ParkingLotViewSet(ModelViewSet):
         queryset = super().get_queryset()
         
         # PostGIS-optimized location filtering
+        # PostGIS-optimized location filtering
         lat = self.request.query_params.get('lat')
         lng = self.request.query_params.get('lng')
         radius = self.request.query_params.get('radius', 10)
@@ -61,9 +66,19 @@ class ParkingLotViewSet(ModelViewSet):
             ).annotate(
                 distance=DistanceFunction('location', user_location)
             ).order_by('distance')
+            user_location = Point(float(lng), float(lat), srid=4326)
+            radius_m = Distance(km=float(radius))
+            
+            # Use PostGIS dwithin for efficient spatial filtering
+            queryset = queryset.filter(
+                location__dwithin=(user_location, radius_m)
+            ).annotate(
+                distance=DistanceFunction('location', user_location)
+            ).order_by('distance')
 
         return queryset
 
+# Keep BookingViewSet and MyParkingLotsViewSet as they were...
 # Keep BookingViewSet and MyParkingLotsViewSet as they were...
 class BookingViewSet(ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -150,6 +165,7 @@ class MyParkingLotsViewSet(ReadOnlyModelViewSet):
 @permission_classes([permissions.IsAuthenticated])
 def search_parking_spots(request):
     """Advanced search with PostGIS optimization"""
+    """Advanced search with PostGIS optimization"""
     lat = request.query_params.get('lat')
     lng = request.query_params.get('lng')
     start_time = request.query_params.get('start_time')
@@ -162,9 +178,12 @@ def search_parking_spots(request):
     
     user_location = Point(float(lng), float(lat), srid=4326)
     radius_m = Distance(km=radius)
+    user_location = Point(float(lng), float(lat), srid=4326)
+    radius_m = Distance(km=radius)
     start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
     end_time = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
     
+    # Get unavailable spots for the time period
     # Get unavailable spots for the time period
     unavailable_spots = Booking.objects.filter(
         status__in=['confirmed', 'active'],
@@ -172,6 +191,15 @@ def search_parking_spots(request):
         end_time__gt=start_time
     ).values_list('spot_id', flat=True)
     
+    # PostGIS optimized query
+    queryset = ParkingLot.objects.filter(
+        is_active=True,
+        location__dwithin=(user_location, radius_m)
+    ).exclude(
+        id__in=unavailable_spots
+    ).annotate(
+        distance=DistanceFunction('location', user_location)
+    ).order_by('distance')
     # PostGIS optimized query
     queryset = ParkingLot.objects.filter(
         is_active=True,
@@ -198,8 +226,8 @@ def search_parking_spots(request):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def nearby_parking_spots(request):
-    lat = request.query_params.get('lat')
-    lng = request.query_params.get('lng')
+    lat = request.query_params.get('latitude')
+    lng = request.query_params.get('longitude')
     radius = float(request.query_params.get('radius', 5))
     limit = int(request.query_params.get('limit', 10))
     
@@ -250,10 +278,7 @@ def nearby_parking_spots(request):
         }
         results.append(data)
     
-    return Response({
-        'count': len(results),
-        'results': results
-    })
+    return Response({"spots": results})
 
 # Advanced PostGIS queries for future features
 @api_view(['GET'])

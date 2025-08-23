@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 import AntDesign from '@expo/vector-icons/AntDesign';
-import { Typography } from './Typography';
+import { Typography } from '@/src/components/ui/Typography';
 
 
 interface HeaderProps {

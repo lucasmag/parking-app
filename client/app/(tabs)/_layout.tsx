@@ -1,4 +1,4 @@
-import TabOption from '@/components/ui/TabOption';
+import TabOption from '@/src/components/ui/TabOption';
 import { Tabs, TabList, TabTrigger, TabSlot } from 'expo-router/ui';
 
 export default function TabLayout() {

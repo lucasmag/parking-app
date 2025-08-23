@@ -184,7 +184,6 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
       if (data.status === 'OK') {
         setPredictions(data.predictions.slice(0, maxResults));
       } else {
-        console.log(data.status);
         setError(data.error_message || 'Erro ao buscar endereços');
         setPredictions([]);
       }
@@ -410,7 +409,7 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
     <View className={`relative ${className}`}>
       {/* Input Field */}
       <View className="relative">
-        <View className="flex-row items-center bg-white rounded-xl border border-gray-200 px-4 py-3">
+        <View className="flex-row items-center bg-white rounded-full border border-gray-200 px-4 py-3">
           <Feather name="search" size={20} color="#9CA3AF" />
           
           <TextInput
@@ -490,12 +489,10 @@ const TypeaheadExample: React.FC<TypeaheadExampleProps> = ({ onLocationSelect })
     address: string, 
     prediction: GooglePlacesPrediction | { isCurrentLocation: boolean }
   ): void => {
-    console.log('Selected address:', address);
     setSelectedAddress(address);
   };
 
   const handleLocationSelect = (locationData: LocationData): void => {
-    console.log('Location details:', locationData);
     setSelectedLocation(locationData);
     // Forward to parent component if provided
     onLocationSelect?.(locationData);
@@ -504,7 +501,7 @@ const TypeaheadExample: React.FC<TypeaheadExampleProps> = ({ onLocationSelect })
   return (
     <View className="flex-1">
       <GoogleMapsTypeahead
-        placeholder="Onde você quer estacionar?"
+        placeholder="Digite um local ou endereco"
         onAddressSelect={handleAddressSelect}
         onLocationSelect={handleLocationSelect}
         countryCode="BR"
