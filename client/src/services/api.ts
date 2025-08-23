@@ -5,9 +5,22 @@ import { camelize, decamelize, toSnakeCase } from './utils';
 
 export type QueryParams = Record<string, string | number | boolean | null | undefined>;
 
-class ApiClient {
-  private baseURL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+export interface FetchSuccess<T> {
+  data: T;
+  error: null;
+}
 
+export interface FetchError {
+  data: {};
+  error: {
+    message: string;
+    status?: number;
+  };
+}
+
+export type FetchResult<T> = FetchSuccess<T> | FetchError;
+
+class ApiClient {
   private async getAuthToken(): Promise<string | null> {
     try {
       return await AsyncStorage.getItem('auth_token');
@@ -17,8 +30,41 @@ class ApiClient {
     }
   }
 
+  private async safeFetch<T>(
+    url: string,
+    config?: RequestInit
+  ): Promise<FetchResult<T>> {
+    try {
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`HTTP ${response.status} | ${errorText}`);
+
+        return {
+          data: {},
+          error: {
+            message: errorText || response.statusText,
+            status: response.status,
+          },
+        };
+      }
+
+      const data = (await response.json()) as T;
+      return { data, error: null };
+    } catch (err) {
+      console.log(err);
+      return {
+        data: {},
+        error: {
+          message: err instanceof Error ? err.message : "Network error",
+        },
+      };
+    }
+  }
+
   private buildUrl(endpoint: string, params?: QueryParams): string {
-    const url = new URL(endpoint, this.baseURL)
+    const url = new URL(endpoint, API_CONFIG.base_url)
     
     if (params) {
       const searchParams = new URLSearchParams()
@@ -59,15 +105,10 @@ class ApiClient {
     if (config.body && typeof config.body === 'object') {
       config.body = JSON.stringify(decamelize(config.body))
     }
-
-    const response = await fetch(url, config)
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-    
-    const data = await response.json()
-    return camelize(data) as TResponse;
+    console.log(url)
+    const response = await this.safeFetch<TResponse>(url, config);
+  
+    return camelize(response.data || {}) as TResponse;
   }
 
   get<T>(endpoint: string, params?: QueryParams): Promise<T> {

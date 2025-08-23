@@ -1,11 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { parkingApi, NearbySpotsParams } from "../api";
-import { ParkingSpot } from "../types";
+import { parkingApi, NearbySpotsParams, NearbySpotsResult } from "../api";
 
 export function useNearbySpotsQuery(params?: NearbySpotsParams) {
-  return useQuery<ParkingSpot[]>({
+  return useQuery<NearbySpotsResult>({
     queryKey: [params],
     queryFn: () => parkingApi.getNearbySpots(params as NearbySpotsParams),
-    enabled: false,
+    enabled: Boolean(params),
   })
 }

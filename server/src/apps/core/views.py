@@ -226,8 +226,8 @@ def search_parking_spots(request):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def nearby_parking_spots(request):
-    lat = request.query_params.get('lat')
-    lng = request.query_params.get('lng')
+    lat = request.query_params.get('latitude')
+    lng = request.query_params.get('longitude')
     radius = float(request.query_params.get('radius', 5))
     limit = int(request.query_params.get('limit', 10))
     
@@ -278,10 +278,7 @@ def nearby_parking_spots(request):
         }
         results.append(data)
     
-    return Response({
-        'count': len(results),
-        'results': results
-    })
+    return Response({"spots": results})
 
 # Advanced PostGIS queries for future features
 @api_view(['GET'])

@@ -7,6 +7,11 @@ export interface NearbySpotsParams extends QueryParams {
   longitude: number;
 };
 
+export interface NearbySpotsResult {
+  spots: ParkingSpot[];
+}
+
 export const parkingApi = {
-  getNearbySpots: (params: NearbySpotsParams): Promise<ParkingSpot[]> => apiClient.get('/nearby', params),
+  getNearbySpots: (params: NearbySpotsParams): Promise<NearbySpotsResult> =>
+    apiClient.get('nearby/', params),
 }

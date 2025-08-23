@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Header } from '@/src/components/layout/Header';
 import TypeaheadExample from '@/src/components/ui/Typeahead';
-import ParkingCarousel from '@/src/features/parking/components/ParkingSpotCarousel';
 import { View, Text, StyleSheet, Alert, TouchableOpacity, ScrollView } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -10,7 +8,6 @@ import { Typography } from '@/src/components/ui/Typography';
 import { MapLocation, ParkingSpot } from '../types';
 import { DEFAULT_LOCATION } from '../constants';
 import { MaterialIcons } from '@expo/vector-icons';
-import { parkingApi } from '../api';
 import { useNearbySpotsQuery } from '../hooks/useNearbySpotsQuery';
 
 
@@ -20,11 +17,14 @@ export default function ParkingSpotPage() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [showPermissionDeniedMessage, setShowPermissionDeniedMessage] = useState(false);
+
   const nearbySpotParams = useMemo(() => {
     if (!location) return;
     return {latitude: location.latitude, longitude: location.longitude};
   }, [location]);
+
   const {data} = useNearbySpotsQuery(nearbySpotParams);
+  console.log(data?.spots.map(spot => [spot.latitude, spot.longitude]));
 
   const mapRef = useRef<MapView>(null);
 
@@ -131,6 +131,8 @@ export default function ParkingSpotPage() {
       if (mapRef.current) {
         mapRef.current.animateToRegion(newRegion, 1000);
       }
+
+      setLocation(newRegion);
     }
   };
 
@@ -225,17 +227,18 @@ export default function ParkingSpotPage() {
           showsMyLocationButton={false}
           followsUserLocation={false}
           toolbarEnabled={false}
-        />
-        {data?.map(spot => (
-          <Marker
-            coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            title={spot.title}
-          >
-            <MaterialIcons name="local-parking" size={24} color="black" />
-          </Marker>
-        ))}
-
+        >
+          {location && data?.spots.map((spot, index) => (
+            <Marker
+              key={index}
+              coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              title={spot.title}
+            >
+              <MaterialIcons name="local-parking" size={24} color="black" />
+            </Marker>
+          ))}
+        </MapView>
         <TouchableOpacity
           onPress={handleCurrentLocationPress}
           className="absolute bottom-4 right-4 bg-white rounded-full p-3 shadow-lg border border-gray-200"

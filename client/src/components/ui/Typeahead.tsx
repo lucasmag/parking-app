@@ -184,7 +184,6 @@ const GoogleMapsTypeahead: React.FC<GoogleMapsTypeaheadProps> = ({
       if (data.status === 'OK') {
         setPredictions(data.predictions.slice(0, maxResults));
       } else {
-        console.log(data.status);
         setError(data.error_message || 'Erro ao buscar endereços');
         setPredictions([]);
       }
@@ -490,12 +489,10 @@ const TypeaheadExample: React.FC<TypeaheadExampleProps> = ({ onLocationSelect })
     address: string, 
     prediction: GooglePlacesPrediction | { isCurrentLocation: boolean }
   ): void => {
-    console.log('Selected address:', address);
     setSelectedAddress(address);
   };
 
   const handleLocationSelect = (locationData: LocationData): void => {
-    console.log('Location details:', locationData);
     setSelectedLocation(locationData);
     // Forward to parent component if provided
     onLocationSelect?.(locationData);

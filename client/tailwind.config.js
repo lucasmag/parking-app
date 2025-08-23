@@ -2,7 +2,7 @@
 import colors from "./colors";
 export const content = [
   './app/**/*.{js,ts,jsx,tsx}',
-  './components/**/*.{js,ts,jsx,tsx}',
+  './src/**/*.{js,ts,jsx,tsx}',
 ];
 export const presets = [require("nativewind/preset")];
 export const theme = {
@@ -35,6 +35,7 @@ export const theme = {
     boxShadow: {
       card: "0 2px 8px 0 rgba(16, 30, 54, 0.06)",
       button: "0 1px 3px 0 rgba(37, 99, 235, 0.15)",
+      'top-md': '0 -4px 6px -1px rgba(0, 0, 0, 0.1), 0 -2px 4px -2px rgba(0, 0, 0, 0.1)',
     },
   },
 };

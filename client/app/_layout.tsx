@@ -1,3 +1,5 @@
+import '@/global.css';
+
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -6,7 +8,6 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAppFonts } from '@/src/hooks/useFonts';
 import { ActivityIndicator, Text, View, StyleSheet } from 'react-native';
-import '@/global.css';
 
 const queryClient = new QueryClient();
 
